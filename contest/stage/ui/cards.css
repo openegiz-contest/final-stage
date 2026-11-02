@@ -1,0 +1,154 @@
+/* The outcome layer (ui/cards.js): the corner bug, the result banner, the Last Word card, the
+   verdict card, the podium and the final screen. The ui/stage.css language: white on a soft dark
+   backing, Inter and IBM Plex Mono, no hairlines, no neon, no CSS animation (cards.js sets every
+   change from the show clock). Brass (#c9a46a, the tubes' majority collars) marks a place and a
+   decision. Sizes for 1080p viewed on a phone: anything a viewer must read is ≥ 28 px Inter or
+   ≥ 30 px Plex Mono (cap height ≥ 20 px). */
+
+.cd { position: absolute; inset: 0; }
+.cd > * { position: absolute; }
+.cd-back { background: rgba(8, 8, 9, 0.66); border-radius: 10px; }
+.cd-dim { color: #8f8a83 !important; }
+.cd-kicker { font: 600 30px/1.2 "Inter", system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: #c9a46a; }
+
+/* the corner bug: place · round, the ceiling note, the podium so far */
+.cd-bug { left: 64px; top: 52px; padding: 14px 24px 16px; max-width: 700px; }
+.cd-bug-head { font: 600 36px/1.2 "Inter", system-ui, sans-serif; white-space: nowrap; color: #f6f3ee; }
+.cd-bug-sep, .cd-bug-round { font-weight: 400; color: #d6d0c7; }
+.cd-bug-note { font: 500 28px/1.3 "Inter", system-ui, sans-serif; color: #b3ada4; margin-top: 6px; }
+.cd-bug-pod { margin-top: 10px; }
+.cd-bug-head + .cd-bug-pod, .cd-bug-note + .cd-bug-pod { padding-top: 8px; }
+.cd-bug-pod:first-child { margin-top: 0; }
+.cd-bug-row { font: 500 32px/1.32 "Inter", system-ui, sans-serif; white-space: nowrap; color: #f6f3ee; }
+.cd-num { display: inline-block; min-width: 1.25em; font-weight: 700; color: #c9a46a; }
+
+/* the result over the tubes: top centre, clear of the bug and of the subtitles */
+.cd-banner { left: 50%; top: 168px; transform: translateX(-50%); padding: 14px 34px 18px; text-align: center; white-space: nowrap; }
+.cd-banner-main { font: 600 54px/1.15 "Inter", system-ui, sans-serif; color: #f6f3ee; }
+.cd-banner .cd-kicker { margin-bottom: 4px; }
+
+/* the Last Word card: what fired, the rule, the scores that decided */
+.cd-lw { right: 64px; top: 64px; width: 800px; padding: 24px 32px 26px; }
+.cd-lw-title { font: 600 46px/1.15 "Inter", system-ui, sans-serif; margin-top: 6px; color: #f6f3ee; }
+.cd-lw-why { font: 500 32px/1.3 "Inter", system-ui, sans-serif; margin-top: 10px; color: #d6d0c7; }
+.cd-lw-head { font: 500 28px/1.3 "Inter", system-ui, sans-serif; margin-top: 22px; color: #a8a29a; }
+.cd-lw-rows { margin-top: 6px; }
+.cd-lw-row { display: flex; align-items: baseline; gap: 22px; padding: 6px 14px 8px; margin-left: -14px; border-radius: 8px; color: #bdb7ae; white-space: nowrap; }
+.cd-lw-score { font: 500 36px/1.2 "IBM Plex Mono", ui-monospace, monospace; min-width: 4.2em; }
+.cd-lw-name { font: 600 36px/1.2 "Inter", system-ui, sans-serif; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.cd-lw-team { font: 400 30px/1.2 "IBM Plex Mono", ui-monospace, monospace; color: #8f8a83; }
+.cd-lw-row.cd-win { background: rgba(201, 164, 106, 0.22); color: #fbf6ee; box-shadow: inset 6px 0 0 #c9a46a; }
+.cd-lw-row.cd-win .cd-lw-team { color: #d6d0c7; }
+
+/* the verdict card: left column; reasons join one by one under the headline */
+.cd-verdict { left: 64px; top: 56px; width: 860px; padding: 24px 34px 28px; }
+.cd-v-name { font: 700 88px/1.04 "Inter", system-ui, sans-serif; margin: 6px 0 10px; color: #fbf6ee; }
+.cd-v-meta { font: 500 32px/1.3 "Inter", system-ui, sans-serif; color: #d6d0c7; }
+.cd-v-team { font: 500 31px/1.3 "IBM Plex Mono", ui-monospace, monospace; color: #bdb7ae; }
+.cd-v-sep { color: #8f8a83; }
+.cd-v-reasons { margin-top: 6px; }
+.cd-reason { margin-top: 22px; padding: 2px 0 2px 22px; border-left: 6px solid #c9a46a; }
+.cd-reason-who { font: 600 28px/1.3 "Inter", system-ui, sans-serif; color: #cfc9c0; margin-bottom: 2px; }
+.cd-reason-text { font: 500 36px/1.3 "Inter", system-ui, sans-serif; color: #f6f3ee; }
+/* every majority reason stays on the card: the text steps down until the card fits (cards.js fitSize) */
+.cd-verdict.cd-m .cd-reason-text { font-size: 33px; }
+.cd-verdict.cd-s .cd-reason-text { font-size: 30px; }
+.cd-verdict.cd-s .cd-reason { margin-top: 16px; }
+.cd-verdict.cd-xs .cd-reason-text { font-size: 28px; line-height: 1.25; }
+.cd-verdict.cd-xs .cd-reason { margin-top: 12px; }
+.cd-verdict.cd-xs .cd-reason-who, .cd-verdict.cd-xs .cd-reason-text { display: inline; }
+.cd-verdict.cd-xs .cd-reason-who { margin-right: 12px; }
+.cd-verdict.cd-xs .cd-v-name { font-size: 72px; }
+/* «Против: GPT 6.1 sol → «Штрек»», and a Judge without a vote under the count */
+.cd-v-against { font: 500 30px/1.3 "Inter", system-ui, sans-serif; color: #d6d0c7; margin-top: 22px; padding-left: 28px; }
+.cd-v-against-k { font-weight: 600; color: #f6f3ee; }
+.cd-v-absent { font: 500 28px/1.3 "Inter", system-ui, sans-serif; color: #b3ada4; margin-top: 6px; }
+
+/* the corner header: a Judge out this round */
+.cd-bug-away { color: #d6d0c7; }
+
+/* a note over a vote's reveal (top right, clear of the bug, the token and the subtitles): a changed
+   vote, or a Judge without a vote */
+.cd-note { right: 64px; top: 56px; max-width: 860px; padding: 14px 28px 16px; }
+.cd-note .cd-kicker { margin-bottom: 4px; }
+.cd-note-main { font: 600 40px/1.2 "Inter", system-ui, sans-serif; color: #f6f3ee; }
+.cd-note-sub { font: 500 30px/1.3 "Inter", system-ui, sans-serif; color: #d6d0c7; margin-top: 6px; }
+.cd-banner-sub { font: 500 30px/1.3 "Inter", system-ui, sans-serif; color: #d6d0c7; margin-top: 6px; }
+
+/* the podium: steps 2 · 1 · 3 over the room, bottom centre */
+.cd-podium { left: 50%; top: 48px; transform: translateX(-50%); padding: 16px 24px 0; }
+.cd-steps { display: flex; align-items: flex-end; gap: 16px; }
+.cd-step { width: 340px; text-align: center; }
+.cd-step-name { font: 700 40px/1.12 "Inter", system-ui, sans-serif; color: #fbf6ee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
+.cd-step-team { font: 400 30px/1.3 "IBM Plex Mono", ui-monospace, monospace; color: #bdb7ae; margin: 2px 0 10px; }
+.cd-step-block { display: flex; align-items: center; justify-content: center; background: #1b1b1d; border-radius: 6px 6px 0 0; transform-origin: 50% 100%; }
+.cd-step-block.cd-on { background: #262422; box-shadow: inset 0 6px 0 #c9a46a; }
+.cd-step-1 { height: 128px; }
+.cd-step-2 { height: 96px; }
+.cd-step-3 { height: 72px; }
+.cd-step-num { font: 700 58px/1 "Inter", system-ui, sans-serif; color: #5f5b56; }
+.cd-on .cd-step-num { color: #c9a46a; }
+
+/* the final screen: the dimmed room, the whole podium in the middle, the subtitles under it */
+.cd-scrim { inset: 0; background: rgba(4, 4, 5, 0.58); }
+.cd-final { left: 50%; top: 150px; transform: translateX(-50%); text-align: center; }
+.cd-final-title { font-size: 36px; margin-bottom: 34px; }
+.cd-big .cd-step { width: 470px; }
+.cd-big .cd-step-name { font-size: 56px; }
+.cd-big .cd-step-team { font-size: 32px; }
+.cd-big .cd-step-1 { height: 250px; }
+.cd-big .cd-step-2 { height: 190px; }
+.cd-big .cd-step-3 { height: 140px; }
+.cd-big .cd-step-num { font-size: 96px; }
+.cd-big .cd-step-block { background: rgba(30, 29, 28, 0.92); }
+
+/* sealed envelopes (owner 2026-10-28): a decided place is sealed, the envelopes open 3 → 2 → 1 after the
+   debate. Paper on the dark backing, a brass seal with the place's number (brass marks a place) */
+/* top left, like the verdict card: the Host who speaks the line stays in the middle of the frame */
+.cd-env { left: 64px; top: 56px; padding: 22px 40px 26px; text-align: center; white-space: nowrap; }
+.cd-env .cd-kicker { margin-bottom: 2px; }
+.cd-env-main { font: 700 64px/1.1 "Inter", system-ui, sans-serif; color: #fbf6ee; }
+.cd-env-sub { font: 500 32px/1.3 "Inter", system-ui, sans-serif; color: #d6d0c7; margin-top: 2px; }
+.cd-env-row { display: flex; justify-content: center; align-items: flex-end; gap: 34px; margin-top: 26px; }
+/* an opening card: room above the envelopes for the flaps folded up */
+.cd-env-opening .cd-env-row { margin-top: 112px; }
+.cd-env-col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.cd-env-label { font: 500 28px/1.2 "Inter", system-ui, sans-serif; color: #a8a29a; }
+.cd-env-on .cd-env-label { color: #f6f3ee; font-weight: 600; }
+.cd-env-one { position: relative; width: 150px; height: 100px; }
+.cd-env-cur { width: 210px; height: 140px; }
+.cd-env-body { position: absolute; inset: 0; border-radius: 6px; background: #ddd2bf; }
+.cd-env-flap { position: absolute; left: 0; right: 0; top: 0; height: 60%; background: #c9bca5; clip-path: polygon(0 0, 100% 0, 50% 100%); transform-origin: 50% 0; }
+.cd-env-num { position: absolute; left: 0; right: 0; bottom: 8%; font: 700 34px/1 "Inter", system-ui, sans-serif; color: #8a7f6d; text-align: center; }
+.cd-env-cur .cd-env-num { font-size: 44px; }
+.cd-env-seal { position: absolute; left: 50%; top: 60%; width: 40%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: #c9a46a;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.22); font: 700 34px/1 "Inter", system-ui, sans-serif; color: #2a2118; display: flex; align-items: center; justify-content: center; }
+.cd-env-cur .cd-env-seal { font-size: 46px; }
+.cd-env-sealed .cd-env-num { display: none; }
+.cd-env-sealed.cd-env-numshow .cd-env-num { display: block; }
+.cd-env-pending .cd-env-body, .cd-env-vacant .cd-env-body { background: transparent; box-shadow: inset 0 0 0 4px #4a4744; }
+.cd-env-pending .cd-env-flap, .cd-env-vacant .cd-env-flap { display: none; }
+.cd-env-pending .cd-env-num, .cd-env-vacant .cd-env-num { bottom: 30%; color: #6f6a63; }
+.cd-env-open .cd-env-body { background: #cfc4b1; }
+/* the corner header: a sealed place's row */
+.cd-env-mini { display: inline-block; vertical-align: -3px; width: 42px; height: 28px; margin-right: 12px; }
+.cd-env-mini .cd-env-seal { font-size: 0; width: 34%; }
+
+/* ?cams=1 (ui/safe.js SAFE): the webcam circles sit in the top corners (300 px, 40 px from the edges).
+   The cards of the top corners move into the band between them (x 380 … 1540); the final screen
+   starts under them. */
+.cams .cd-bug, .cams .cd-verdict, .cams .cd-env { left: 380px; }
+.cams .cd-lw, .cams .cd-note { right: 380px; }
+.cams .cd-lw { width: 760px; }
+.cams .cd-final { top: 356px; }
+/* the verdict card beside its Judge (the card shot frames the Judge on the right): a little narrower, and
+   denser where it now covers a console's monitor */
+.cams .cd-verdict { width: 820px; background: rgba(8, 8, 9, 0.84); }
+
+/* a Finalist's minute (ui/program.js, stage-tv): its caption one small line top right, over the room and
+   above the big screen in the minute's shots; under the cams inside the band between the circles
+   (program.js sizes --px so the line fits) */
+.cd-bug.cd-minute { left: auto; right: 64px; top: 36px; max-width: none; padding: 8px 18px 10px; }
+.cams .cd-bug.cd-minute { left: auto; right: 380px; }
+.cd-minute .cd-bug-head { font-size: var(--px, 26px); }
+.cd-bug-line { font-weight: 400; color: #c9c3ba; }

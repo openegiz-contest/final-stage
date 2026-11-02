@@ -1,0 +1,124 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Robots: turnaround sheet (a check)</title>
+<style>
+  html, body { margin: 0; background: #5b5e63; overflow: hidden; }
+  canvas { display: block; }
+  .l { position: absolute; font: 500 26px "Inter", system-ui, sans-serif; color: #f1f1ef; transform: translateX(-50%); white-space: nowrap; text-align: center; }
+  .l small { display: block; font: 400 19px "IBM Plex Mono", ui-monospace, monospace; color: #c9cacc; margin-top: 4px; }
+  .r { position: absolute; left: 28px; font: 400 20px "IBM Plex Mono", ui-monospace, monospace; color: #d6d7d9; }
+</style>
+<script type="importmap">
+  { "imports": { "three": "/vendor/three/build/three.module.min.js", "three/addons/": "/vendor/three/examples/jsm/" } }
+</script>
+<canvas id="c"></canvas>
+<script type="module">
+// All six robots at one scale (orthographic), front, three-quarter and side, in their idle "waiting"
+// pose, on a neutral grey backdrop under a plain studio light (key, fill, rim, a room environment for
+// the reflections). Not the Stage's room: this sheet is for reading shapes, proportions and materials.
+//   node contest/stage/robots/check/run.mjs robots/check/turnaround.html --global __sheet --size 2400x2700 --shot contest/stage/out/robots-turnaround.png
+import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { createRobot } from "/robots/index.js";
+
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("c"), antialias: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H);
+renderer.toneMapping = THREE.AgXToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.autoClear = false;
+const pmrem = new THREE.PMREMGenerator(renderer);
+const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight("#e9ecf0", "#3a3836", 0.7));
+const key = new THREE.DirectionalLight("#fff3e6", 2.4);
+key.position.set(-3, 4, 5);
+const fill = new THREE.DirectionalLight("#e6eeff", 0.7);
+fill.position.set(4, 2, 4);
+const back = new THREE.DirectionalLight("#ffffff", 1.4);
+back.position.set(1, 4, -5);
+scene.add(key, fill, back);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 0.004), new THREE.MeshBasicMaterial({ color: "#46484c" }));
+scene.add(floor);
+
+const SPACING = 1.0, ids = ["opus-5.5", "sonnet-5.5", "fable-5.1", "gpt-6.1-sol", "gpt-6-astra", "host"];
+const robots = ids.map((id, i) => {
+  const r = createRobot(id);
+  const x = (i - (ids.length - 1) / 2) * SPACING;
+  scene.add(r.object3d);
+  r.setState("waiting", 0);
+  return { r, x };
+});
+// the room's reflections at each material's own level (as the Stage does), scaled for this brighter env
+const seen = new Set();
+scene.traverse((o) => {
+  for (const m of Array.isArray(o.material) ? o.material : o.material ? [o.material] : []) {
+    if (seen.has(m) || !m.isMeshStandardMaterial) continue;
+    seen.add(m);
+    m.envMap = env;
+    m.envMapIntensity = (m.userData.env ?? 0.5) * 0.1;
+  }
+});
+
+const VIEWS = [["front", 0], ["three-quarter", 0.62], ["side", Math.PI / 2]];
+const band = H / VIEWS.length, worldH = 2.3, worldW = worldH * (W / band);
+const cam = new THREE.OrthographicCamera(-worldW / 2, worldW / 2, worldH - 0.12, -0.12, 0.1, 50);
+cam.position.set(0, 0, 20);
+cam.lookAt(0, 0, 0);
+cam.position.set(0, 0, 20);
+const T = 0.6; // a moment of the idle life with the head near straight
+renderer.setClearColor("#5b5e63", 1);
+renderer.setScissorTest(true);
+renderer.clear();
+VIEWS.forEach(([name, yaw], row) => {
+  for (const { r, x } of robots) {
+    r.place({ post: new THREE.Vector3(x, 0, 0), deskYaw: yaw, roomYaw: yaw, spot: new THREE.Vector3(x, 0, 1) });
+    r.update(T);
+  }
+  const y = H - (row + 1) * band;
+  renderer.setViewport(0, y, W, band);
+  renderer.setScissor(0, y, W, band);
+  renderer.render(scene, cam);
+  const lab = document.createElement("div");
+  lab.className = "r";
+  lab.style.top = `${row * band + 18}px`;
+  lab.textContent = name;
+  document.body.append(lab);
+});
+// names under the front row's robots, with their heights
+const px = W / worldW;
+robots.forEach(({ r, x }) => {
+  const lab = document.createElement("div");
+  lab.className = "l";
+  lab.style.left = `${W / 2 + x * px}px`;
+  lab.style.top = `${band - 0.1 * px + 6}px`;
+  lab.innerHTML = `${r.info.model}<small>${r.info.height.toFixed(2)} m</small>`;
+  document.body.append(lab);
+});
+const gl = renderer.getContext(), dbg = gl.getExtension("WEBGL_debug_renderer_info");
+// proportions in the front view: the shoulders' outer width (both upper-arm parts, caps included) and
+// the head's width and height (the head part with its face), metres
+const size = (names, r) => {
+  const box = new THREE.Box3();
+  for (const n of names) {
+    const o = r.object3d.getObjectByName(n);
+    if (o) box.expandByObject(o);
+  }
+  return box.getSize(new THREE.Vector3());
+};
+for (const { r, x } of robots) {
+  r.place({ post: new THREE.Vector3(x, 0, 0), deskYaw: 0, roomYaw: 0, spot: new THREE.Vector3(x, 0, 1) });
+  r.update(T);
+}
+scene.updateMatrixWorld(true);
+const dims = Object.fromEntries(robots.map(({ r }) => {
+  const sh = size(["upper_L", "upper_R"], r), hd = size(["head", "face"], r);
+  return [r.id, { height: r.info.height, shoulders: +sh.x.toFixed(3), headW: +hd.x.toFixed(3), headH: +hd.y.toFixed(3) }];
+}));
+const o = dims["opus-5.5"], s5 = dims["sonnet-5.5"];
+window.__sheet = { dims, opusOverSonnet: { height: +(o.height / s5.height).toFixed(3), shoulders: +(o.shoulders / s5.shoulders).toFixed(3), headW: +(o.headW / s5.headW).toFixed(3) },
+  gpu: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "?" };
+</script>

@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Сцена Финала — стиль-кадр</title>
+<link rel="stylesheet" href="/ui/stage.css">
+<script type="importmap">
+  { "imports": { "three": "/vendor/three/build/three.module.min.js", "three/addons/": "/vendor/three/examples/jsm/" } }
+</script>
+<canvas id="stage"></canvas>
+<div id="overlay" class="ov"></div>
+<script type="module">
+// The style frame: about a minute of the Final on the show clock (?t= freezes a moment, ?gfx=lite
+// is the light preset). The scene, the show layer and the 2D layer are the live ones; only
+// ui/mock.js is invented. ?loop=1 restarts the sequence when it ends (for watching it in a browser).
+import { runLoop, gfx } from "/lib/clock.js";
+import { createStage } from "/world/stage.js";
+import { createSubtitles, createCaptions } from "/ui/subtitles.js";
+import { fitFrame } from "/ui/safe.js";
+import { createShow } from "/ui/show.js";
+import { playMock } from "/ui/mock.js";
+
+await Promise.all(['500 46px "Inter"', '600 42px "Inter"', '650 112px "Inter"', '700 104px "Inter"', '400 24px "IBM Plex Mono"', '400 44px "IBM Plex Mono"', '500 46px "IBM Plex Mono"', '600 84px "Inter"']
+  .map((f) => document.fonts.load(f)));
+fitFrame();
+const stage = await createStage({ canvas: document.getElementById("stage"), gfx });
+const root = document.getElementById("overlay");
+const subs = createSubtitles(root, { stage }), caps = createCaptions(root, stage);
+const show = createShow({ stage, subs, caps });
+const { duration, marks, report } = await playMock(show, stage, caps);
+await stage.ready();
+const loop = new URLSearchParams(location.search).has("loop");
+window.__frame = { duration, marks, report, stage };
+runLoop({
+  renderer: stage.renderer,
+  renderAt(t) {
+    const s = loop ? t % duration : t;
+    stage.renderAt(s);
+    subs.update(s);
+    caps.update(s);
+  },
+});
+</script>

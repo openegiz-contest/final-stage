@@ -1,0 +1,439 @@
+{
+  "_comment": "Speakers -> fallback chain (first entry that works wins; the response names the engine used). Voices are provisional: the owner picks by ear from the voice sample (README). Keys other than engine/voice/timeout_s are engine settings and part of the cache key. audio_tags: the engine takes [tag] marks (eleven_v3/v4); settings.auto_tags runs tagger.py on every line, the shown text never changes.",
+  "settings": {
+    "timeout_s": 8,
+    "cooldown_s": 30,
+    "concurrency": 2,
+    "auto_tags": true,
+    "tag_timeout_s": 15
+  },
+  "engines": {
+    "elevenlabs": {
+      "model_id": "eleven_v4",
+      "output_format": "mp3_44100_128",
+      "audio_tags": true,
+      "timeout_s": 20,
+      "say": {
+        "README": "ридми",
+        "GPT 6.1 sol": "GPT шесть точка один Сол",
+        "GPT 6 astra": "GPT шесть Астра",
+        "Sonnet 5.5": "Sonnet пять точка пять",
+        "Opus 5.5": "Opus пять точка пять",
+        "Fable 5.1": "Fable пять точка один",
+        "GPT 6.1": "GPT шесть точка один",
+        "GPT 6": "GPT шесть",
+        "sol": "Сол",
+        "astra": "Астра",
+        "Финалист D": "Финалист Ди",
+        "Финалист F": "Финалист Эф",
+        "Финалист G": "Финалист Джи",
+        "Финалист J": "Финалист Джей",
+        "Финалист L": "Финалист Эл",
+        "Финалист N": "Финалист Эн",
+        "Финалист Q": "Финалист Кью",
+        "Финалист R": "Финалист Ар",
+        "Финалист S": "Финалист Эс",
+        "Финалист Z": "Финалист Зед",
+        "Финалист V": "Финалист Ви",
+        "Финалист W": "Финалист Дабл-ю",
+        "Финалиста D": "Финалиста Ди",
+        "Финалиста F": "Финалиста Эф",
+        "Финалиста G": "Финалиста Джи",
+        "Финалиста J": "Финалиста Джей",
+        "Финалиста L": "Финалиста Эл",
+        "Финалиста N": "Финалиста Эн",
+        "Финалиста Q": "Финалиста Кью",
+        "Финалиста R": "Финалиста Ар",
+        "Финалиста S": "Финалиста Эс",
+        "Финалиста Z": "Финалиста Зед",
+        "Финалиста V": "Финалиста Ви",
+        "Финалиста W": "Финалиста Дабл-ю",
+        "Финалисту D": "Финалисту Ди",
+        "Финалисту F": "Финалисту Эф",
+        "Финалисту G": "Финалисту Джи",
+        "Финалисту J": "Финалисту Джей",
+        "Финалисту L": "Финалисту Эл",
+        "Финалисту N": "Финалисту Эн",
+        "Финалисту Q": "Финалисту Кью",
+        "Финалисту R": "Финалисту Ар",
+        "Финалисту S": "Финалисту Эс",
+        "Финалисту Z": "Финалисту Зед",
+        "Финалисту V": "Финалисту Ви",
+        "Финалисту W": "Финалисту Дабл-ю",
+        "Финалистом D": "Финалистом Ди",
+        "Финалистом F": "Финалистом Эф",
+        "Финалистом G": "Финалистом Джи",
+        "Финалистом J": "Финалистом Джей",
+        "Финалистом L": "Финалистом Эл",
+        "Финалистом N": "Финалистом Эн",
+        "Финалистом Q": "Финалистом Кью",
+        "Финалистом R": "Финалистом Ар",
+        "Финалистом S": "Финалистом Эс",
+        "Финалистом Z": "Финалистом Зед",
+        "Финалистом V": "Финалистом Ви",
+        "Финалистом W": "Финалистом Дабл-ю",
+        "Финалисте D": "Финалисте Ди",
+        "Финалисте F": "Финалисте Эф",
+        "Финалисте G": "Финалисте Джи",
+        "Финалисте J": "Финалисте Джей",
+        "Финалисте L": "Финалисте Эл",
+        "Финалисте N": "Финалисте Эн",
+        "Финалисте Q": "Финалисте Кью",
+        "Финалисте R": "Финалисте Ар",
+        "Финалисте S": "Финалисте Эс",
+        "Финалисте Z": "Финалисте Зед",
+        "Финалисте V": "Финалисте Ви",
+        "Финалисте W": "Финалисте Дабл-ю"
+      }
+    },
+    "yandex": {},
+    "macos": {}
+  },
+  "speakers": {
+    "opus-5.5": {
+      "label": "Opus 5.5: large, calm",
+      "chain": [
+        {
+          "engine": "elevenlabs",
+          "voice": "TUQNWEvVPBLzMBSVDPUA",
+          "stability": 0.6,
+          "similarity_boost": 0.75,
+          "style": 0.1,
+          "speed": 0.95,
+          "note": "Alex Bell"
+        },
+        {
+          "engine": "yandex",
+          "voice": "filipp",
+          "speed": 0.95
+        },
+        {
+          "engine": "macos",
+          "voice": "Milena",
+          "rate": 0.42,
+          "pitch": 0.7
+        }
+      ]
+    },
+    "sonnet-5.5": {
+      "label": "Sonnet 5.5: light",
+      "chain": [
+        {
+          "engine": "elevenlabs",
+          "voice": "AB9XsbSA4eLG12t2myjN",
+          "stability": 0.45,
+          "similarity_boost": 0.75,
+          "style": 0.2,
+          "speed": 1.05,
+          "note": "Larisa"
+        },
+        {
+          "engine": "yandex",
+          "voice": "dasha",
+          "role": "friendly",
+          "speed": 1.05
+        },
+        {
+          "engine": "macos",
+          "voice": "Milena",
+          "rate": 0.54,
+          "pitch": 1.3
+        }
+      ]
+    },
+    "fable-5.1": {
+      "label": "Fable 5.1: storyteller",
+      "chain": [
+        {
+          "engine": "elevenlabs",
+          "voice": "dQO3cohklRk58SrkwMjq",
+          "stability": 0.4,
+          "similarity_boost": 0.75,
+          "style": 0.3,
+          "speed": 0.95,
+          "note": "Nurlan"
+        },
+        {
+          "engine": "yandex",
+          "voice": "ermil",
+          "role": "good",
+          "speed": 0.95
+        },
+        {
+          "engine": "macos",
+          "voice": "Milena",
+          "rate": 0.46,
+          "pitch": 0.9
+        }
+      ]
+    },
+    "gpt-6.1-sol": {
+      "label": "GPT 6.1 Sol: warmer",
+      "chain": [
+        {
+          "engine": "elevenlabs",
+          "voice": "t6lBrEl93uCiLR1Lgm8v",
+          "stability": 0.5,
+          "similarity_boost": 0.75,
+          "style": 0.15,
+          "speed": 1.0,
+          "note": "Alisa"
+        },
+        {
+          "engine": "yandex",
+          "voice": "alena",
+          "role": "good",
+          "speed": 1.0
+        },
+        {
+          "engine": "macos",
+          "voice": "Milena",
+          "rate": 0.5,
+          "pitch": 1.1
+        }
+      ]
+    },
+    "gpt-6-astra": {
+      "label": "GPT 6 Astra: colder",
+      "chain": [
+        {
+          "engine": "elevenlabs",
+          "voice": "9NqTZSpHJZHucyduMacF",
+          "stability": 0.8,
+          "similarity_boost": 0.75,
+          "style": 0.0,
+          "speed": 1.03,
+          "note": "Bekzat"
+        },
+        {
+          "engine": "yandex",
+          "voice": "julia",
+          "speed": 1.0
+        },
+        {
+          "engine": "macos",
+          "voice": "Milena",
+          "rate": 0.5,
+          "pitch": 0.85
+        }
+      ]
+    },
+    "host": {
+      "label": "Host: neutral",
+      "chain": [
+        {
+          "engine": "elevenlabs",
+          "voice": "L9IT3CnBaFSG99pi86dr",
+          "stability": 0.6,
+          "similarity_boost": 0.75,
+          "style": 0.0,
+          "speed": 1.0,
+          "note": "Aizhan"
+        },
+        {
+          "engine": "yandex",
+          "voice": "lera",
+          "speed": 1.0
+        },
+        {
+          "engine": "macos",
+          "voice": "Milena",
+          "rate": 0.5,
+          "pitch": 1.0
+        }
+      ]
+    }
+  },
+  "sample": {
+    "text": "Коллеги, команда «Север-7» набрала 86 баллов из 100. Диспетчер не терял самосвалы, но карта простоя осталась без единого пояснения. Я бы не ставил их выше «Кобальта».",
+    "candidates": {
+      "macos": [
+        {
+          "label": "Milena, низкий и медленный (Opus)",
+          "voice": "Milena",
+          "rate": 0.42,
+          "pitch": 0.7
+        },
+        {
+          "label": "Milena, высокий и быстрый (Sonnet)",
+          "voice": "Milena",
+          "rate": 0.54,
+          "pitch": 1.3
+        },
+        {
+          "label": "Milena, мягкий, чуть ниже (Fable)",
+          "voice": "Milena",
+          "rate": 0.46,
+          "pitch": 0.9
+        },
+        {
+          "label": "Milena, тёплая, чуть выше (Sol)",
+          "voice": "Milena",
+          "rate": 0.5,
+          "pitch": 1.1
+        },
+        {
+          "label": "Milena, ровная и низкая (Astra)",
+          "voice": "Milena",
+          "rate": 0.5,
+          "pitch": 0.85
+        },
+        {
+          "label": "Milena, без правок (Ведущий)",
+          "voice": "Milena",
+          "rate": 0.5,
+          "pitch": 1.0
+        }
+      ],
+      "elevenlabs": [
+        {
+          "label": "Maxim: глубокий, русский диктор",
+          "voice": "gMIlPNegT3C1SdNBp6rW",
+          "stability": 0.65,
+          "style": 0.0,
+          "speed": 0.95
+        },
+        {
+          "label": "Alex Bell: глубокий, рассказчик",
+          "voice": "TUQNWEvVPBLzMBSVDPUA",
+          "stability": 0.45,
+          "style": 0.25,
+          "speed": 0.97
+        },
+        {
+          "label": "Vishnevski: низкий, ровный",
+          "voice": "Jy9A3l4WDp3IWeJMxJaW",
+          "stability": 0.7,
+          "style": 0.0,
+          "speed": 1.0
+        },
+        {
+          "label": "Alisa: уверенный, женский",
+          "voice": "t6lBrEl93uCiLR1Lgm8v",
+          "stability": 0.5,
+          "style": 0.15,
+          "speed": 1.0
+        },
+        {
+          "label": "Alina: чёткий, молодой женский",
+          "voice": "dVRDrbP5ULGXB94se4KZ",
+          "stability": 0.45,
+          "style": 0.1,
+          "speed": 1.05
+        },
+        {
+          "label": "Larisa: бодрый, женский",
+          "voice": "AB9XsbSA4eLG12t2myjN",
+          "stability": 0.55,
+          "style": 0.0,
+          "speed": 1.0
+        },
+        {
+          "label": "Nurlan: спокойный рассказчик (казахский голос)",
+          "voice": "dQO3cohklRk58SrkwMjq",
+          "stability": 0.5,
+          "style": 0.1,
+          "speed": 1.0
+        },
+        {
+          "label": "Bolat: спокойный (казахский голос)",
+          "voice": "RojlvMxYbtU94goTCgIP",
+          "stability": 0.55,
+          "style": 0.0,
+          "speed": 1.0
+        },
+        {
+          "label": "Serik: тёплый, уверенный (казахский голос)",
+          "voice": "nXhev13NFTenmq7t5WZH",
+          "stability": 0.5,
+          "style": 0.1,
+          "speed": 1.0
+        },
+        {
+          "label": "Bekzat: суховатый (казахский голос)",
+          "voice": "9NqTZSpHJZHucyduMacF",
+          "stability": 0.6,
+          "style": 0.0,
+          "speed": 1.0
+        },
+        {
+          "label": "Aizhan: спокойный женский (казахский голос)",
+          "voice": "L9IT3CnBaFSG99pi86dr",
+          "stability": 0.55,
+          "style": 0.0,
+          "speed": 1.0
+        },
+        {
+          "label": "Aigerim: прямой женский (казахский голос)",
+          "voice": "QpQ3ApUOdmaUcNblVLGC",
+          "stability": 0.55,
+          "style": 0.0,
+          "speed": 1.0
+        },
+        {
+          "label": "George: британский рассказчик, по-русски",
+          "voice": "JBFqnCBsd6RMkjVDRZzb",
+          "stability": 0.45,
+          "style": 0.25,
+          "speed": 0.97
+        },
+        {
+          "label": "Daniel: британский диктор, по-русски",
+          "voice": "onwK4e9ZLuTAKqWW03F9",
+          "stability": 0.65,
+          "style": 0.0,
+          "speed": 1.0
+        }
+      ],
+      "yandex": [
+        {
+          "label": "filipp: мужской (Opus)",
+          "voice": "filipp",
+          "speed": 0.95
+        },
+        {
+          "label": "dasha, friendly: лёгкий (Sonnet)",
+          "voice": "dasha",
+          "role": "friendly",
+          "speed": 1.05
+        },
+        {
+          "label": "ermil, good: рассказчик (Fable)",
+          "voice": "ermil",
+          "role": "good",
+          "speed": 0.95
+        },
+        {
+          "label": "alena, good: теплее (Sol)",
+          "voice": "alena",
+          "role": "good",
+          "speed": 1.0
+        },
+        {
+          "label": "julia: холоднее (Astra)",
+          "voice": "julia",
+          "speed": 1.0
+        },
+        {
+          "label": "lera: нейтральный (Ведущий)",
+          "voice": "lera",
+          "speed": 1.0
+        }
+      ]
+    },
+    "tags": [
+      {
+        "at": 0,
+        "tag": "thoughtful"
+      },
+      {
+        "at": 53,
+        "tag": "sighs"
+      },
+      {
+        "at": 132,
+        "tag": "skeptical"
+      }
+    ]
+  }
+}

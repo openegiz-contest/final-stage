@@ -1,0 +1,47 @@
+{
+ "team": "team-003",
+ "sha": "0000000000000000000000000000000000000003",
+ "started_at": "2026-10-27T09:00:00+00:00",
+ "finished_at": "2026-10-27T09:25:00+00:00",
+ "came_up": true,
+ "steps": [
+  {
+   "readme_step": "make up",
+   "command": "make up",
+   "exit_code": 0,
+   "duration_s": 140,
+   "log": "logs/01-make-up.txt"
+  }
+ ],
+ "healthchecks": [
+  {
+   "name": "containers_running",
+   "ok": true,
+   "evidence": "docker ps"
+  },
+  {
+   "name": "containers_healthy",
+   "ok": true,
+   "evidence": "docker ps -a"
+  }
+ ],
+ "modules": [
+  {
+   "name": "Вентиляция",
+   "claimed_in_submission": true,
+   "works": "yes",
+   "evidence": "регулятор снизил CO в забое с 31 до 18 ppm на Стенде"
+  },
+  {
+   "name": "Диспетчеризация",
+   "claimed_in_submission": true,
+   "works": "yes",
+   "evidence": "маршруты самосвалов пересчитываются при закрытии штрека"
+  }
+ ],
+ "built_on_openegiz": {
+  "verdict": "yes",
+  "evidence": "двойники в Ditto, данные по MQTT"
+ },
+ "notes": ""
+}

@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>Сцена Финала</title>
+<link rel="stylesheet" href="/ui/stage.css">
+<style>
+  /* the operator's one click, only when the browser holds the sound back (never on air, never under ?t=) */
+  .unlock { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.72); cursor: pointer; z-index: 10; }
+  .unlock div { font: 600 44px/1.3 "Inter", system-ui, sans-serif; color: #f6f3ee; text-align: center; padding: 28px 44px; border-radius: 12px; background: rgba(20, 20, 22, 0.9); }
+  .unlock small { display: block; margin-top: 10px; font: 400 26px/1.3 "IBM Plex Mono", ui-monospace, monospace; color: #cfc9c0; }
+</style>
+<script type="importmap">
+  { "imports": { "three": "/vendor/three/build/three.module.min.js", "three/addons/": "/vendor/three/examples/jsm/" } }
+</script>
+<canvas id="stage"></canvas>
+<div id="overlay" class="ov"></div>
+<script type="module">
+// The Final on air: the engine's data, played by the director, on the Stage, cut by the planner.
+//   live.html                       the running engine (server.py --live), real voices (TTS on 127.0.0.1:8790)
+//   ?replay=test/replays/x.jsonl    a recording instead of the engine
+//   ?voice=estimate                 no TTS service: silent lines at 145 words/min
+//   ?t=12.5                         virtual time: the whole recording is planned first, the frame of t is drawn
+//                                   (stills, tools/clip.mjs); deterministic
+//   ?from=n                         resume at beat n;  ?gfx=lite  the light preset;  ?check=1  window.__stage.check
+// ui/live.js has the details.
+import { startLive } from "/ui/live.js";
+await startLive({ canvas: document.getElementById("stage"), overlay: document.getElementById("overlay") });
+</script>

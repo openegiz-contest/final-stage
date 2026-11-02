@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>Эфир Финала</title>
+<link rel="stylesheet" href="/ui/stage.css">
+<link rel="stylesheet" href="/ui/cards.css">
+<style>
+  /* the operator's one click, only when the browser holds the sound back (never on air, never under ?t=) */
+  .unlock { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.72); cursor: pointer; z-index: 10; }
+  .unlock div { font: 600 44px/1.3 "Inter", system-ui, sans-serif; color: #f6f3ee; text-align: center; padding: 28px 44px; border-radius: 12px; background: rgba(20, 20, 22, 0.9); }
+  .unlock small { display: block; margin-top: 10px; font: 400 26px/1.3 "IBM Plex Mono", ui-monospace, monospace; color: #cfc9c0; }
+</style>
+<script type="importmap">
+  { "imports": { "three": "/vendor/three/build/three.module.min.js", "three/addons/": "/vendor/three/examples/jsm/" } }
+</script>
+<canvas id="stage"></canvas>
+<div id="overlay" class="ov"></div>
+<script type="module">
+// The whole broadcast from one page: the opening, the Host's introduction with the hash check, the
+// Finalists' minutes, the engine's start, the debate (live.html's show), the last words.
+//   python3 contest/stage/server.py --program <dir with program.json>      then  /show.html
+//   ?program=<url>                  another programme (default /program/program.json)
+//   ?replay=test/replays/x.jsonl    a recording instead of the engine (its run appears at the launch)
+//   ?voice=estimate                 no TTS service, no programme audio: silent lines, typed on their words
+//   keys (ui/operator.js)           Space pause · → next segment / end a hold / next beat · ← back;
+//                                   ?hold=0 no holds after the minutes;  ?air=1 no operator indicator (OBS)
+//   ?t=12.5                         virtual time: the whole broadcast is planned first (stills, tools/clip.mjs)
+//   ?segment=<id>                   start in that segment (title, intro, finalist-<rank>, launch, debate)
+//   ?from=n                         the debate at beat n;  ?gfx=lite  the light preset;  ?check=1
+//   ?cams=1                         the preshow hosts' webcam circles in the top corners: nothing under them (ui/safe.js)
+// ui/program.js has the details.
+import * as live from "/ui/live.js";
+import { startShow } from "/ui/program.js";
+await startShow({ canvas: document.getElementById("stage"), overlay: document.getElementById("overlay"), live });
+</script>

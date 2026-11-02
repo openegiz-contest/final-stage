@@ -1,0 +1,137 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Robots: motion sheet (a check)</title>
+<style>
+  html, body { margin: 0; background: #5b5e63; overflow: hidden; }
+  canvas { display: block; }
+  .l { position: absolute; font: 500 24px "Inter", system-ui, sans-serif; color: #f1f1ef; transform: translateX(-50%); white-space: nowrap; }
+  .r { position: absolute; left: 24px; font: 400 19px "IBM Plex Mono", ui-monospace, monospace; color: #d6d7d9; }
+</style>
+<script type="importmap">
+  { "imports": { "three": "/vendor/three/build/three.module.min.js", "three/addons/": "/vendor/three/examples/jsm/" } }
+</script>
+<canvas id="c"></canvas>
+<script type="module">
+// The robots' life through the README's own calls, each robot in a column, one moment per row, three-
+// quarter view at one scale: idle (twice, seconds apart), its gesture beat, speaking on a voice, the
+// decide beat (straightening, the token in hand). Also numbers in window.__motion: the head's mean
+// speed while idle (the tempo), how far the hands travel in the gesture, the token hand's distance to
+// the chest at tokenAt.
+//   node contest/stage/robots/check/run.mjs robots/check/motion.html --global __motion --size 2400x3360 --shot contest/stage/out/robots-motion.png
+import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { createRobot } from "/robots/index.js";
+
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("c"), antialias: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H);
+renderer.toneMapping = THREE.AgXToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.autoClear = false;
+const env = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight("#e9ecf0", "#3a3836", 0.7));
+const key = new THREE.DirectionalLight("#fff3e6", 2.4);
+key.position.set(-3, 4, 5);
+const fill = new THREE.DirectionalLight("#e6eeff", 0.7);
+fill.position.set(4, 2, 4);
+const back = new THREE.DirectionalLight("#ffffff", 1.4);
+back.position.set(1, 4, -5);
+scene.add(key, fill, back, new THREE.Mesh(new THREE.PlaneGeometry(40, 0.004), new THREE.MeshBasicMaterial({ color: "#46484c" })));
+
+const ids = ["opus-5.5", "sonnet-5.5", "fable-5.1", "gpt-6.1-sol", "gpt-6-astra", "host"];
+const YAW = 0.45, SPACING = 1.0;
+const voice = (t) => 0.5 + 0.5 * Math.sin(t * 9.0) * Math.sin(t * 2.3);
+const R = ids.map((id, i) => {
+  const r = createRobot(id);
+  const x = (i - (ids.length - 1) / 2) * SPACING;
+  scene.add(r.object3d);
+  r.place({ post: new THREE.Vector3(x, 0, 0), deskYaw: YAW, roomYaw: YAW, spot: new THREE.Vector3(x, 0, 1) });
+  r.setVoice(voice);
+  // the script: idle, a gesture, speaking (with a gesture on it), idle, the decide beat
+  r.setState("waiting", 0);
+  const g = r.beat("gesture", 6);
+  r.setState("speaking", 10, { facing: "room" });
+  const g2 = r.beat("gesture", 11.5);
+  r.setState("waiting", 15);
+  const d = r.beat("decide", 18);
+  return { r, x, g, g2, d };
+});
+const seen = new Set();
+scene.traverse((o) => {
+  for (const m of Array.isArray(o.material) ? o.material : o.material ? [o.material] : []) {
+    if (seen.has(m) || !m.isMeshStandardMaterial) continue;
+    seen.add(m);
+    m.envMap = env;
+    m.envMapIntensity = (m.userData.env ?? 0.5) * 0.1;
+  }
+});
+
+// the numbers
+const v = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3();
+const world = (o) => (scene.updateMatrixWorld(true), o.getWorldPosition(new THREE.Vector3()));
+const metrics = {};
+for (const { r, g, d } of R) {
+  // idle: the head's mean speed over 0..5.5 s (cm/s), sampled at 30 Hz
+  let prev = null, path = 0;
+  for (let t = 0; t <= 5.5; t += 1 / 30) {
+    r.update(t);
+    const p = world(r.anchors.head);
+    if (prev) path += p.distanceTo(prev);
+    prev = p;
+  }
+  // the gesture: the farthest either hand gets from where it was at the beat's start (cm)
+  r.update(g.t0);
+  const h0 = [world(r.object3d.getObjectByName("hand_L") ?? r.anchors.hand), world(r.anchors.hand)];
+  let reach = 0;
+  for (let t = g.t0; t <= g.end; t += 1 / 30) {
+    r.update(t);
+    reach = Math.max(reach, world(r.object3d.getObjectByName("hand_L") ?? r.anchors.hand).distanceTo(h0[0]), world(r.anchors.hand).distanceTo(h0[1]));
+  }
+  // decide: the token hand to the chest at tokenAt (cm); the state reported
+  r.update(d.tokenAt);
+  const toChest = world(r.anchors.hand).distanceTo(world(r.anchors.chest));
+  metrics[r.id] = { idleHeadSpeed: +(path / 5.5 * 100).toFixed(2), gestureReach: +(reach * 100).toFixed(1), gestureDur: +(g.end - g.t0).toFixed(2),
+    decide: { dimAt: +(d.dimAt - d.t0).toFixed(2), tokenAt: +(d.tokenAt - d.t0).toFixed(2), end: +(d.end - d.t0).toFixed(2) }, handToChestAtToken: +(toChest * 100).toFixed(1),
+    stateAtToken: r.stateAt(d.tokenAt), height: r.info.height };
+}
+
+const ROWS = [
+  ["idle 1.0 s", () => 1.0],
+  ["idle 4.5 s", () => 4.5],
+  ["gesture (mid)", (x) => x.g.t0 + 0.45 * (x.g.end - x.g.t0)],
+  ["speaking + gesture", (x) => x.g2.t0 + 0.5 * (x.g2.end - x.g2.t0)],
+  ["decide: tokenAt", (x) => x.d.tokenAt],
+  ["decide: end (holds)", (x) => x.d.end + 0.6],
+];
+const band = H / ROWS.length, worldH = 2.25, worldW = worldH * (W / band);
+const cam = new THREE.OrthographicCamera(-worldW / 2, worldW / 2, worldH - 0.1, -0.1, 0.1, 50);
+cam.position.set(0, 0, 20);
+renderer.setClearColor("#5b5e63", 1);
+renderer.setScissorTest(true);
+renderer.clear();
+ROWS.forEach(([name, at], row) => {
+  for (const x of R) x.r.update(at(x));
+  const y = H - (row + 1) * band;
+  renderer.setViewport(0, y, W, band);
+  renderer.setScissor(0, y, W, band);
+  renderer.render(scene, cam);
+  const lab = document.createElement("div");
+  lab.className = "r";
+  lab.style.top = `${row * band + 14}px`;
+  lab.textContent = name;
+  document.body.append(lab);
+});
+const px = W / worldW;
+R.forEach(({ r, x }) => {
+  const lab = document.createElement("div");
+  lab.className = "l";
+  lab.style.left = `${W / 2 + x * px}px`;
+  lab.style.top = `${band - 0.1 * px + 4}px`;
+  lab.textContent = r.info.model;
+  document.body.append(lab);
+});
+window.__motion = metrics;
+</script>

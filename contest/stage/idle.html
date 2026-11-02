@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>Сцена Финала: фон</title>
+<link rel="stylesheet" href="/ui/stage.css">
+<link rel="stylesheet" href="/ui/idle.css">
+<script type="importmap">
+  { "imports": { "three": "/vendor/three/build/three.module.min.js", "three/addons/": "/vendor/three/examples/jsm/" } }
+</script>
+<canvas id="stage"></canvas>
+<div id="overlay" class="ov"></div>
+<script type="module">
+// The silent live background of the broadcast's OBS scenes: the same control room as show.html, a slow
+// camera loop through it, the robots in idle, no voice, no operator. One page, four modes:
+//   ?mode=soon&at=2026-10-31T15:00:00+05:00   «Финал начнётся через MM:SS», after zero «Начинаем»
+//   ?mode=host&name=<text>&role=<text>        behind the live host's camera (OBS: x=100 y=170 1120×630)
+//   ?mode=break                               «Технический перерыв» · «Скоро вернёмся»
+//   ?mode=end                                 «Спасибо!» · the results' address; the cams' corners stay clear
+//   ?t=12.5  a still (lib/clock.js);  ?now=<ISO>  the wall clock at t=0 (checks of the countdown);  ?gfx=lite
+// ui/idle.js has the details.
+import { startIdle } from "/ui/idle.js";
+await startIdle({ canvas: document.getElementById("stage"), overlay: document.getElementById("overlay") });
+</script>

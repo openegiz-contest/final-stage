@@ -1,0 +1,61 @@
+/* The broadcast's live background (idle.html, ui/idle.js). The type of show.html's cards and title
+   (ui/stage.css, ui/cards.css): Inter, brass #c9a46a for the kicker, warm white #f6f3ee / #fbf6ee,
+   no hairlines, no CSS animation (every change is set from the page clock). Sized for a phone-sized
+   YouTube player: the smallest text 30 px on the 1920×1080 frame. Text sits low and left, clear of
+   the cams' circles in the top corners (ui/safe.js: 300 px, 40 px from the edges). */
+
+.id-layer { position: absolute; inset: 0; color: #f6f3ee; }
+.id-scrim { position: absolute; inset: 0; }
+/* the room darkens toward the lower left, where the text stands, and a little toward the right */
+.id-scrim-low {
+  background:
+    linear-gradient(to top, rgba(5, 5, 6, 0.86) 0%, rgba(5, 5, 6, 0.62) 30%, rgba(5, 5, 6, 0.18) 58%, rgba(5, 5, 6, 0) 72%),
+    linear-gradient(to right, rgba(5, 5, 6, 0.42) 0%, rgba(5, 5, 6, 0) 52%),
+    radial-gradient(ellipse 760px 520px at 100% 100%, rgba(5, 5, 6, 0.55) 0%, rgba(5, 5, 6, 0) 100%);
+}
+.id-kicker { font: 600 32px/1.2 "Inter", system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #c9a46a; }
+
+/* the title block: low on the left */
+.id-block { position: absolute; left: 96px; bottom: 92px; max-width: 1180px; }
+.id-title { font: 700 92px/1.04 "Inter", system-ui, sans-serif; letter-spacing: -0.01em; color: #fbf6ee; margin-top: 14px; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45); }
+.id-line { display: block; }
+.id-main { font: 700 112px/1.02 "Inter", system-ui, sans-serif; letter-spacing: -0.012em; color: #fbf6ee; margin-top: 14px; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45); }
+.id-thanks { font-size: 150px; }
+.id-sub { font: 500 50px/1.25 "Inter", system-ui, sans-serif; color: #e2dcd2; margin-top: 18px; }
+.id-url { font-weight: 650; color: #fbf6ee; }
+
+/* the countdown: the label, then the digits as the hero */
+.id-count { margin-top: 40px; }
+.id-count-label { font: 500 46px/1.2 "Inter", system-ui, sans-serif; color: #e2dcd2; }
+.id-count-digits {
+  font: 700 176px/1 "Inter", system-ui, sans-serif; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em; color: #fbf6ee; margin-top: 8px; text-shadow: 0 2px 24px rgba(0, 0, 0, 0.5);
+}
+.id-count-digits.id-started { font-size: 132px; color: #c9a46a; margin-top: 0; }
+
+/* the Finalists: low on the right, two columns, alphabetical (the announcement's order) */
+.id-finalists { position: absolute; right: 96px; bottom: 96px; width: 620px; }
+.id-cols { display: grid; grid-template-columns: 1fr 1fr; column-gap: 36px; margin-top: 12px; }
+.id-name {
+  font: 500 34px/1.42 "Inter", system-ui, sans-serif; color: #f2ede5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* host: the live camera's rect stays dark and calm (OBS covers it), the plaque under it, the title
+   and the room in the right column */
+.id-scrim-host {
+  background:
+    linear-gradient(to right, rgba(5, 5, 6, 0.55) 0%, rgba(5, 5, 6, 0.42) 58%, rgba(5, 5, 6, 0.08) 72%, rgba(5, 5, 6, 0) 100%),
+    linear-gradient(to bottom, rgba(5, 5, 6, 0.5) 0%, rgba(5, 5, 6, 0) 30%),
+    radial-gradient(ellipse 820px 520px at 85% 22%, rgba(5, 5, 6, 0.5) 0%, rgba(5, 5, 6, 0) 100%);
+}
+.id-slot { position: absolute; background: rgba(4, 4, 5, 0.72); box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55); }
+.id-plaque {
+  position: absolute; padding: 14px 34px 18px 36px; border-radius: 10px;
+  background: rgba(9, 9, 10, 0.86); box-shadow: inset 8px 0 0 #c9a46a, 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+.id-plaque-name { font: 650 54px/1.12 "Inter", system-ui, sans-serif; color: #fbf6ee; white-space: nowrap; }
+.id-plaque-role { font: 600 32px/1.3 "Inter", system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: #c9a46a; margin-top: 4px; white-space: nowrap; }
+.id-side { position: absolute; left: 1290px; right: 80px; }
+.id-side .id-title { font-size: 66px; line-height: 1.06; margin-top: 12px; }
+.id-foot { font: 500 34px/1.3 "Inter", system-ui, sans-serif; color: #e2dcd2; margin-top: 22px; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6); }

@@ -1,0 +1,4 @@
+{"type":"thread.started","thread_id":"01a15d59-2cb9-7840-b901-f50b99678e13"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"{\"place\":1,\"team\":\"team-003\",\"reason\":\"Связанная модель шахты, видимые последствия двух обратимых сценариев и работающая вентиляция дают более полноценный двойник, чем team-011 без визуализации процесса.\"}"}}
+{"type":"turn.completed","usage":{"input_tokens":26779,"cached_input_tokens":0,"cache_write_input_tokens":0,"output_tokens":131,"reasoning_output_tokens":68}}

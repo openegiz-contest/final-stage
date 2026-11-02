@@ -1,0 +1,225 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Сцена — исходы раундов (тест ui/cards.js)</title>
+<link rel="stylesheet" href="/ui/stage.css">
+<link rel="stylesheet" href="/ui/cards.css">
+<script type="importmap">
+  { "imports": { "three": "/vendor/three/build/three.module.min.js", "three/addons/": "/vendor/three/examples/jsm/" } }
+</script>
+<canvas id="stage"></canvas>
+<div id="overlay" class="ov"></div>
+<script type="module">
+// SYNTHETIC TEST DATA, never for air. Every outcome case of ui/cards.js on the real scene, on the
+// show clock (?t= freezes a moment, ?gfx=lite is the light preset). The payloads are the director's
+// own: synthetic engine events go through director/plan.js (the Planner), and each beat's sink calls
+// are played here the way a sink plays them: status → cards.header, host → show.host, tally begin →
+// show.tally, voteReveal → show.voteReveal, tally result → cards.tallyResult, lastWord, verdict,
+// podium, final → cards.*. Invented here: the votes and their reasons, the Finalists' scores; vote
+// casts are quick drops off camera (the walk is not the subject of this page).
+//   place 1, round 1: no majority (2 · 2 · 1), two Finalists under the ceiling → «раунд 2 из 3», tubes reset
+//   place 1, round 2: Fable unavailable (3 of 4), majority → verdict (3 reasons) → podium 1
+//   place 2, round 3 of 3: no majority → Last Word (10.4) → verdict by the rule → podium 2
+//   place 3: vacant → podium 3 → final screen
+// ?restore=mid  a resume after place 2 (header and podium at once); ?restore=done  after the show.
+import { runLoop, gfx } from "/lib/clock.js";
+import { createStage } from "/world/stage.js";
+import { createSubtitles, createCaptions } from "/ui/subtitles.js";
+import { createShow } from "/ui/show.js";
+import { createCards, applyShots } from "/ui/cards.js";
+import { revealShots } from "/ui/shots.js";
+import { Planner } from "/director/plan.js";
+import { estimateTiming } from "/director/voice.js";
+import { JUDGE_IDS } from "/robots/roster.js";
+
+await Promise.all(['500 46px "Inter"', '600 42px "Inter"', '700 88px "Inter"', '400 30px "IBM Plex Mono"', '500 36px "IBM Plex Mono"']
+  .map((f) => document.fonts.load(f)));
+const stage = await createStage({ canvas: document.getElementById("stage"), gfx });
+const root = document.getElementById("overlay");
+const subs = createSubtitles(root), caps = createCaptions(root, stage);
+const show = createShow({ stage, subs, caps });
+const cards = createCards({ stage, subs, speak: show.speak });
+const cam = stage.camera;
+const q = new URLSearchParams(location.search);
+
+// ---- the synthetic Final
+const FINALISTS = [
+  ["team-003", "Горный поток", "78.12"], ["team-011", "Штрек", "75.62"], ["team-007", "Карьер-Ай", "70.94"], ["team-002", "Забой", "63.75"],
+  ["team-014", "Недра", "58.44"], ["team-009", "Рудник 4.0", "52.5", true], ["team-001", "Шахтёр", "49.06"], ["team-005", "Глубина", "44.38", true],
+].map(([team, name, score, ceiling], i) => ({ team, name, rank: i + 1, score, ceiling: !!ceiling }));
+const R = {
+  opus1: "Горный поток единственный показал на Стенде полный цикл от забоя до фабрики, и цифры в отчёте сходятся с логами.",
+  sol1: "У Штрека аккуратнее модель вентиляции, но без проверки на Стенде это пока обещание.",
+  sonnet1: "Цифровой двойник Горного потока работает целиком, остальные показывают отдельные модули.",
+  astra1: "Штрек честно описал ограничения модели и проверил прогноз на исторических данных.",
+  fable1: "Карьер-Ай смелее всех в Замысле: оптимизация маршрутов самосвалов в реальном времени.",
+  opus2: "Отчёт сборки чистый, а сценарий аварии на конвейере в Горном потоке отыгран до конца.",
+  sol2: "После второго чтения: модель Горного потока полнее, и она действительно запускается.",
+  sonnet2: "Горный поток единственный связал добычу, транспорт и обогащение в одну модель.",
+  astra2: "Штрек точнее в вентиляции, это важнее для подземного рудника.",
+  opusP2: "Штрек лучше всех оставшихся описал, где его модель ошибается и почему.",
+  solP2: "Карьер-Ай даёт диспетчеру живой план, это ближе всего к работе рудника.",
+  sonnetP2: "Модель вентиляции Штрека проверена на данных, а не только нарисована.",
+  astraP2: "Карьер-Ай: маршруты самосвалов пересчитываются по-настоящему, я видел это на Стенде.",
+  fableP2: "Забой проще, но у него самый понятный интерфейс для оператора.",
+};
+const vote = (judge, team, reason) => ({ judge, team, reason: team ? reason : null, error: team ? null : "timeout" });
+const counts = (votes) => Object.fromEntries(Object.entries(votes.reduce((c, v) => (v.team && (c[v.team] = (c[v.team] ?? 0) + 1), c), {})).sort((a, b) => b[1] - a[1]));
+function votesEv(place, round, votes) {
+  const voted = votes.filter((v) => v.team).length, line = Math.floor(voted / 2) + 1, c = counts(votes);
+  return { type: "votes", place, round, votes, counts: c, voted, judges: votes.length, line, majority: Object.values(c)[0] >= line };
+}
+const EVENTS = [
+  { type: "setup", finalists: FINALISTS, settings: { rounds_per_place: 3, places: 3 } },
+  { type: "round", place: 1, round: 1 },
+  votesEv(1, 1, [vote("opus-5.5", "team-003", R.opus1), vote("gpt-6.1-sol", "team-011", R.sol1), vote("sonnet-5.5", "team-003", R.sonnet1),
+    vote("gpt-6-astra", "team-011", R.astra1), vote("fable-5.1", "team-007", R.fable1)]),
+  { type: "round", place: 1, round: 2 },
+  // ?stress=1: the longest card the rules allow, five majority reasons of ~20 words (spec §7.7: a reason ≤ 20 words)
+  q.has("stress")
+    ? votesEv(1, 2, ["opus-5.5", "gpt-6.1-sol", "sonnet-5.5", "gpt-6-astra", "fable-5.1"].map((j, i) => vote(j, "team-003",
+      `${["Отчёт сборки чистый", "После второго чтения", "Цифровой двойник целиком", "Проверка прогноза", "Сценарий аварии"][i]}: модель Горного потока связывает добычу, транспорт и обогащение, запускается на Стенде и даёт цифры, которые сходятся с логами.`)))
+    : votesEv(1, 2, [vote("opus-5.5", "team-003", R.opus2), vote("gpt-6.1-sol", "team-003", R.sol2), vote("sonnet-5.5", "team-003", R.sonnet2),
+      vote("gpt-6-astra", "team-011", R.astra2), vote("fable-5.1", null)]),
+  { type: "placement", place: 1, team: "team-003", name: "Горный поток", decided_by: "majority", rounds: 2 },
+  { type: "round", place: 2, round: 3 },
+  votesEv(2, 3, [vote("opus-5.5", "team-011", R.opusP2), vote("gpt-6.1-sol", "team-007", R.solP2), vote("sonnet-5.5", "team-011", R.sonnetP2),
+    vote("gpt-6-astra", "team-007", R.astraP2), vote("fable-5.1", "team-002", R.fableP2)]),
+  { type: "placement", place: 2, team: "team-011", name: "Штрек", decided_by: "last_word", rounds: 3 },
+  { type: "placement", place: 3, team: null, name: null, decided_by: "vacant", rounds: 0 },
+  { type: "done" },
+];
+const planner = new Planner();
+const beats = EVENTS.flatMap((ev) => planner.plan(ev));
+
+// ---- everyone where the first frame finds them: the Judges wait facing the room
+const T0 = -10;
+for (const id of JUDGE_IDS) show.judge(id, { status: "ждёт", facing: "room", activity: [] }, { at: T0 });
+cam.cut({ kind: "wide" }, T0);
+
+const marks = {}, verdicts = [], results = [];
+let duration = 2;
+const mode = q.get("restore");
+if (mode) {
+  // a resume: the view after the podium of place 2 (mid) or after the final beat (done), as the director gives it
+  const idx = mode === "done" ? beats.length - 1 : beats.findIndex((b) => b.type === "podium" && b.place === 2);
+  const r = cards.restore({ cursor: idx + 1, ...beats[idx].view }, 0);
+  applyShots(cam, r.shots);
+  marks.restore = 1;
+  duration = 3;
+} else {
+  let t = 1.0, from = -Infinity;
+  const at = (x) => ({ at: x });
+  for (const beat of beats) {
+    const voice = beat.voice ? estimateTiming(beat.voice.text) : null;
+    let end = t + (beat.minS ?? 0);
+    for (const c of beat.calls) {
+      const [a0, a1] = c.args;
+      switch (c.method) {
+        case "status":
+          cards.header(a0, t);
+          if (beat.type === "round") {
+            // Fable is unavailable in place 1, round 2, and back for place 2
+            const off = a0.place === 1 && a0.round === 2;
+            show.judge("fable-5.1", off ? { status: "недоступен", activity: [] } : { status: "ждёт", facing: "room", activity: [] }, at(t));
+          }
+          break;
+        case "host": {
+          const e = show.host(a0, voice, at(t));
+          end = Math.max(end, e + 0.3);
+          if (beat.type === "round" || beat.type === "vote") cam.cut({ kind: "host" }, Math.max(t, from)), (from = t);
+          break;
+        }
+        case "voteCast":
+          // a quick drop off camera (on the Host); the walk is not this page's subject
+          if (a1.order === 1 || (!a1.unavailable && a1.order === null)) cam.cut({ kind: "host" }, Math.max(t, from));
+          if (!a1.unavailable) stage.ballot.drop(a0, t + 0.35 + 0.06 * a1.order);
+          end = Math.max(end, t + (a1.order === a1.of ? 1.1 : 0));
+          break;
+        case "tally":
+          if (a0.stage === "begin") {
+            const contenders = a0.contenders.filter((x) => !x.placed);
+            show.tally({ ...a0, contenders }, at(t));
+            break;
+          }
+          {
+            const r = cards.tallyResult(a0, voice, t);
+            applyShots(cam, r.shots);
+            results.push({ t, ...r, result: a0.result });
+            end = Math.max(end, r.end);
+            from = r.end;
+            marks[`result-${a0.place}-${a0.round}`] = t + 1.6;
+            if (a0.result === "no_majority") marks[`reset-${a0.place}-${a0.round}`] = r.shots[1].from - 0.2;
+            if (a0.result === "no_majority") marks[`reset2-${a0.place}-${a0.round}`] = r.shots[1].from + 1.0;
+            if (a0.result === "majority") marks[`row-${a0.place}-${a0.round}`] = t + 3.0;
+          }
+          break;
+        case "voteReveal": {
+          if (!a0.team) break;
+          const r = show.voteReveal(a0, estimateTiming(a0.reason ?? ""), at(t));
+          const next = revealShots(cam, caps, r, { from, reached: false, ...(a0.index === 0 ? { cardAt: t } : {}) });
+          from = next;
+          end = Math.max(next - 0.5, r.end + 0.3 - 0.5);
+          break;
+        }
+        case "unavailable":
+          show.unavailable(a0, a1, at(t));
+          break;
+        case "lastWord": {
+          const r = cards.lastWord(a0, voice, t);
+          applyShots(cam, r.shots);
+          end = Math.max(end, r.end);
+          marks[`lastword-${a0.place}`] = t + 3.5;
+          marks[`lastword-named-${a0.place}`] = r.shots.at(-1).from + 1.2;
+          break;
+        }
+        case "verdict": {
+          const r = cards.verdict(a0, voice, t);
+          applyShots(cam, r.shots);
+          end = Math.max(end, r.end);
+          verdicts.push({ place: a0.place, t, end: r.end, reasons: a0.reasons, shots: r.shots, vacant: !!a0.vacant });
+          marks[`verdict-${a0.place}`] = t + 2.0;
+          marks[`verdict-host-${a0.place}`] = t + 4.0;
+          r.shots.filter((s) => s.kind === "card").forEach((s, i) => (marks[`verdict-reason${i + 1}-${a0.place}`] = s.from + 1.5));
+          break;
+        }
+        case "podium": {
+          const r = cards.podium(a0, t);
+          applyShots(cam, r.shots);
+          end = Math.max(end, r.end);
+          marks[`podium-${a0.filled}`] = t + 2.0;
+          break;
+        }
+        case "final": {
+          const r = cards.final(a0, voice, t);
+          applyShots(cam, r.shots);
+          end = Math.max(end, r.end);
+          marks.final = t + 1.5;
+          marks["final-read"] = t + 8;
+          break;
+        }
+      }
+    }
+    if (end > from) from = Math.max(from, t);
+    t = end;
+  }
+  duration = Math.ceil(t + 1.5);
+}
+
+await stage.ready();
+const r2 = (x) => Math.round(x * 100) / 100;
+window.__frame = {
+  duration, stage, cards,
+  marks: Object.fromEntries(Object.entries(marks).map(([k, v]) => [k, r2(v)])),
+  verdicts: verdicts.map((v) => ({ ...v, t: r2(v.t), end: r2(v.end) })),
+  results: results.map((r) => ({ t: r2(r.t), end: r2(r.end), result: r.result })),
+  shots: cam.list(),
+};
+runLoop({
+  renderer: stage.renderer,
+  renderAt(t) {
+    stage.renderAt(t);
+    subs.update(t);
+    caps.update(t);
+  },
+});
+</script>

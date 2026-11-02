@@ -1,0 +1,147 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Robots: close-ups in the Stage (a check)</title>
+<link rel="stylesheet" href="/ui/stage.css">
+<style>
+  #sheet { position: fixed; left: 0; top: 0; z-index: 10; background: #111; }
+  .lab { position: fixed; z-index: 11; font: 500 22px "Inter", system-ui, sans-serif; color: #eee; background: rgba(0, 0, 0, 0.55); padding: 3px 8px; }
+</style>
+<script type="importmap">
+  { "imports": { "three": "/vendor/three/build/three.module.min.js", "three/addons/": "/vendor/three/examples/jsm/" } }
+</script>
+<canvas id="stage"></canvas>
+<div id="overlay" class="ov"></div>
+<canvas id="sheet"></canvas>
+<script type="module">
+// Close-ups of the characters in the Stage itself (the style frame's room, lights, post and mock), at
+// moments of the show: every robot's right hand (relaxed and with its token where it carries one) and
+// Fable's head, framed by a camera of this page's own, so the details the director's shots pass over
+// are looked at. Also the face lights side by side at the states' levels, with their light measured on
+// screen (the frame minus the frame with that face off): the bars must read as lit as the eyes.
+//   node contest/stage/robots/check/run.mjs robots/check/closeup.html --global __close --size 2400x2400 --shot contest/stage/out/robots-closeups.png
+//   ?set=faces  the face-light sheet instead (levels 0.1 waiting, 0.17 working, 0.5 and 1.25 speaking), --size 1920x1536
+import * as THREE from "three";
+import { gfx } from "/lib/clock.js";
+import { createStage } from "/world/stage.js";
+import { createSubtitles, createCaptions } from "/ui/subtitles.js";
+import { createShow } from "/ui/show.js";
+import { playMock } from "/ui/mock.js";
+
+const q = new URLSearchParams(location.search);
+const set = q.get("set") || "hands";
+await Promise.all(['500 46px "Inter"', '400 44px "IBM Plex Mono"'].map((f) => document.fonts.load(f)));
+const stage = await createStage({ canvas: document.getElementById("stage"), gfx });
+const root = document.getElementById("overlay");
+const show = createShow({ stage, subs: createSubtitles(root), caps: createCaptions(root, stage) });
+await playMock(show, stage);
+await stage.ready();
+const { renderer, scene } = stage;
+const W = renderer.domElement.width, H = renderer.domElement.height;
+const gl = renderer.getContext();
+const cam = new THREE.PerspectiveCamera(30, W / H, 0.02, 6000);
+
+// a tile: the robot `id` at show time `t`, the camera at `from` (metres, in the robot's own frame:
+// +z its front, +x its left) from the target (`hand`: the right hand; `head`; `face`), lens fov
+const HANDS = [
+  { id: "opus-5.5", part: "hand", t: 45.0, from: [-0.25, 0.12, 0.62], fov: 26, label: "Opus 5.5, token" },
+  { id: "opus-5.5", part: "hand", t: 75, from: [-0.45, 0.05, 0.55], fov: 26, label: "Opus 5.5, at rest" },
+  { id: "sonnet-5.5", part: "hand", t: 35.6, from: [-0.25, 0.1, 0.55], fov: 26, label: "Sonnet 5.5, token" },
+  { id: "sonnet-5.5", part: "hand", t: 75, from: [-0.4, 0.05, 0.5], fov: 26, label: "Sonnet 5.5, at rest" },
+  { id: "fable-5.1", part: "hand", t: 14.5, from: [-0.3, 0.02, 0.6], fov: 26, label: "Fable 5.1, powered down" },
+  { id: "fable-5.1", part: "head", t: 14.5, from: [0.0, 0.05, 0.95], fov: 26, label: "Fable 5.1, head (off)" },
+  { id: "fable-5.1", part: "head", t: 14.5, from: [0.62, 0.1, 0.62], fov: 26, label: "Fable 5.1, head 3/4" },
+  { id: "fable-5.1", part: "back", t: 14.5, from: [0.3, 0.15, -1.1], fov: 28, label: "Fable 5.1, glaze (back)" },
+  { id: "gpt-6.1-sol", part: "hand", t: 27.2, from: [-0.25, 0.1, 0.6], fov: 26, label: "GPT 6.1 sol, token" },
+  { id: "gpt-6.1-sol", part: "hand", t: 75, from: [-0.4, 0.05, 0.5], fov: 26, label: "GPT 6.1 sol, at rest" },
+  { id: "gpt-6-astra", part: "hand", t: 52.6, from: [-0.25, 0.1, 0.6], fov: 26, label: "GPT 6 astra, token" },
+  { id: "gpt-6-astra", part: "hand", t: 75, from: [-0.4, 0.05, 0.5], fov: 26, label: "GPT 6 astra, at rest" },
+  { id: "gpt-6-astra", part: "head", t: 75, from: [0.35, 0.02, 0.9], fov: 26, label: "GPT 6 astra, facets" },
+  { id: "host", part: "hand", t: 75, from: [-0.35, 0.05, 0.6], fov: 26, label: "Host" },
+];
+const FACE_IDS = ["opus-5.5", "sonnet-5.5", "fable-5.1", "gpt-6.1-sol", "gpt-6-astra"];
+const LEVELS = [0.1, 0.17, 0.5, 1.25];
+// Fable (offline, upright at its desk) has its monitor 1 m in front of its face: the same framing from nearer
+const FACES = LEVELS.flatMap((level) => FACE_IDS.map((id) => ({ id, part: "face", t: 75, level, label: `${id} ${level}`,
+  ...(id === "fable-5.1" ? { from: [0, 0.0, 0.42], fov: 41.5 } : { from: [0, 0.0, 1.0], fov: 18 }) })));
+const tiles = set === "faces" ? FACES : HANDS;
+
+const v = new THREE.Vector3(), qt = new THREE.Quaternion();
+function target(r, part) {
+  if (part === "hand") return r.anchors.hand.localToWorld(new THREE.Vector3(0, -0.11, 0));
+  if (part === "head") return r.anchors.head.localToWorld(new THREE.Vector3(0, 0.16, 0.02));
+  if (part === "back") return r.anchors.chest.localToWorld(new THREE.Vector3(0, 0.4, -0.1));
+  const f = r.anchors.face; // the face part hangs at the head joint: its light is at its geometry's centre
+  f.geometry.computeBoundingBox();
+  return f.localToWorld(f.geometry.boundingBox.getCenter(new THREE.Vector3()));
+}
+function shoot(tile, faceOn = true) {
+  const r = stage.robots[tile.id];
+  stage.renderAt(tile.t);
+  const face = r.anchors.face.material?.userData;
+  if (tile.level !== undefined) face?.setLight(faceOn ? tile.level : 0);
+  scene.updateMatrixWorld();
+  const p = target(r, tile.part);
+  r.object3d.getWorldQuaternion(qt);
+  // a face looks along its head; the rest along the body
+  if (tile.part === "face") r.anchors.head.getWorldQuaternion(qt);
+  cam.position.copy(p).add(v.set(...tile.from).applyQuaternion(qt));
+  cam.fov = tile.fov;
+  cam.updateProjectionMatrix();
+  cam.lookAt(p);
+  cam.updateMatrixWorld();
+  stage.post.lens.aperture = 0;
+  stage.post.render([stage.outside, scene], cam, tile.t);
+}
+const px = () => {
+  const a = new Uint8Array(W * H * 4);
+  gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, a);
+  return a;
+};
+const lin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+// the face light on screen: pixels the light changes by more than a hair (linear luminance), their
+// mean and 95th percentile luminance on screen (sRGB 0-255, the frame with the light on)
+function lightStats(on, off) {
+  const Ys = [];
+  for (let k = 0; k < on.length; k += 4) {
+    const d = 0.2126 * (lin(on[k] / 255) - lin(off[k] / 255)) + 0.7152 * (lin(on[k + 1] / 255) - lin(off[k + 1] / 255)) + 0.0722 * (lin(on[k + 2] / 255) - lin(off[k + 2] / 255));
+    if (d < 0.01) continue;
+    Ys.push(0.2126 * on[k] + 0.7152 * on[k + 1] + 0.0722 * on[k + 2]);
+  }
+  Ys.sort((a, b) => a - b);
+  const n = Ys.length;
+  return n ? { px: n, mean: Math.round(Ys.reduce((a, b) => a + b, 0) / n), p95: Math.round(Ys[Math.floor(n * 0.95)]) } : null;
+}
+
+const COLS = set === "faces" ? FACE_IDS.length : 4, TS = set === "faces" ? 384 : 600;
+const rows = Math.ceil(tiles.length / COLS);
+const sheet = document.getElementById("sheet");
+sheet.width = COLS * TS;
+sheet.height = rows * TS;
+sheet.style.width = `${sheet.width}px`;
+sheet.style.height = `${sheet.height}px`;
+const g2 = sheet.getContext("2d");
+const crop = Math.round(H * 0.82);
+const out = [];
+tiles.forEach((tile, i) => {
+  let stats = null;
+  if (tile.level !== undefined) {
+    shoot(tile, false);
+    const off = px();
+    shoot(tile, true);
+    stats = lightStats(px(), off);
+  } else shoot(tile);
+  const x = (i % COLS) * TS, y = Math.floor(i / COLS) * TS;
+  g2.drawImage(renderer.domElement, (W - crop) / 2, (H - crop) / 2, crop, crop, x, y, TS, TS);
+  const lab = document.createElement("div");
+  lab.className = "lab";
+  lab.style.left = `${x + 8}px`;
+  lab.style.top = `${y + 8}px`;
+  lab.style.fontSize = set === "faces" ? "16px" : "22px";
+  lab.textContent = tile.label + (stats ? `  p95 ${stats.p95}` : "");
+  document.body.append(lab);
+  out.push({ ...tile, stats });
+});
+const faces = {};
+for (const o of out) if (o.stats) (faces[o.level] ??= {})[o.id] = o.stats;
+window.__close = { gfx, set, faces: set === "faces" ? faces : undefined, tiles: out.length };
+</script>

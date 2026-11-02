@@ -1,0 +1,157 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Robots: silhouette luma and visor colour (a check)</title>
+<link rel="stylesheet" href="/ui/stage.css">
+<script type="importmap">
+  { "imports": { "three": "/vendor/three/build/three.module.min.js", "three/addons/": "/vendor/three/examples/jsm/" } }
+</script>
+<canvas id="stage"></canvas>
+<div id="overlay" class="ov"></div>
+<script type="module">
+// The fairness check of the characters (robots/README.md): the style frame's picture at ?ts=4.6,52.25
+// (the same stage, show and mock as frame.html), then per Judge a mask of its visible silhouette (the
+// hall drawn again with that robot white and everything else black, glass hidden), both brought to
+// 640×360, and the mean Rec.709 luma of the frame inside the mask. Also the visor colour: the mean
+// linear RGB of the face light's pixels, as a correlated colour temperature (McCamy).
+import * as THREE from "three";
+import { gfx } from "/lib/clock.js";
+import { createStage } from "/world/stage.js";
+import { createSubtitles, createCaptions } from "/ui/subtitles.js";
+import { createShow } from "/ui/show.js";
+import { playMock } from "/ui/mock.js";
+import { JUDGE_IDS } from "/robots/index.js";
+
+const q = new URLSearchParams(location.search);
+const times = (q.get("ts") || "4.6,52.25").split(",").map(Number);
+await Promise.all(['500 46px "Inter"', '400 44px "IBM Plex Mono"'].map((f) => document.fonts.load(f)));
+const stage = await createStage({ canvas: document.getElementById("stage"), gfx });
+const root = document.getElementById("overlay");
+const show = createShow({ stage, subs: createSubtitles(root), caps: createCaptions(root, stage) });
+await playMock(show, stage);
+await stage.ready();
+const { renderer, scene } = stage;
+const cam = stage.three;
+const W = renderer.domElement.width, H = renderer.domElement.height;
+const gl = renderer.getContext();
+const rt = new THREE.WebGLRenderTarget(W, H);
+const black = new THREE.MeshBasicMaterial({ color: 0x000000 }), white = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const red = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+
+function frame(t) {
+  stage.renderAt(t);
+  const px = new Uint8Array(W * H * 4);
+  gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  return px;
+}
+// the mask of one robot: white body, red face light, everything else black
+function mask(id) {
+  const keep = new Set(), face = new Set();
+  stage.robots[id].object3d.traverse((o) => o.isMesh && keep.add(o));
+  stage.robots[id].anchors.face.traverse((o) => o.isMesh && face.add(o));
+  const saved = [];
+  scene.traverse((o) => {
+    if (!o.isMesh && !o.isLine && !o.isPoints && !o.isSprite) return;
+    saved.push([o, o.material, o.visible]);
+    const m = Array.isArray(o.material) ? o.material[0] : o.material;
+    if (!keep.has(o) && (m?.transparent || m?.opacity < 1)) o.visible = false;
+    o.material = face.has(o) ? red : keep.has(o) ? white : black;
+  });
+  const bg = scene.background;
+  scene.background = null;
+  renderer.setRenderTarget(rt);
+  renderer.setClearColor(0x000000, 1);
+  renderer.clear();
+  renderer.render(scene, cam);
+  const px = new Uint8Array(W * H * 4);
+  renderer.readRenderTargetPixels(rt, 0, 0, W, H, px);
+  renderer.setRenderTarget(null);
+  for (const [o, m, v] of saved) (o.material = m), (o.visible = v);
+  scene.background = bg;
+  return px;
+}
+const lin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+function cct(r, g, b) {
+  const X = 0.4124 * r + 0.3576 * g + 0.1805 * b, Y = 0.2126 * r + 0.7152 * g + 0.0722 * b, Z = 0.0193 * r + 0.1192 * g + 0.9505 * b;
+  const x = X / (X + Y + Z), y = Y / (X + Y + Z), n = (x - 0.332) / (0.1858 - y);
+  return Math.round(449 * n ** 3 + 3525 * n ** 2 + 6823.3 * n + 5520.33);
+}
+// stats at 640×360: a 3×3 box of the 1920×1080 frame; a low-res pixel is the robot's when ≥ 5 of 9 are
+function stats(img, m) {
+  const S = 3, w = Math.floor(W / S), h = Math.floor(H / S);
+  let n = 0, sum = 0;
+  const Ys = [];
+  let fr = 0, fg = 0, fb = 0, fn = 0;
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      let cover = 0, R = 0, G = 0, B = 0;
+      for (let j = 0; j < S; j++)
+        for (let i = 0; i < S; i++) {
+          const k = ((y * S + j) * W + (x * S + i)) * 4;
+          if (m[k] > 127) cover++;
+          R += img[k];
+          G += img[k + 1];
+          B += img[k + 2];
+          // the face light, at full resolution: lit, not clipped
+          if (m[k] > 127 && m[k + 1] < 60) {
+            const r = img[k] / 255, g = img[k + 1] / 255, b = img[k + 2] / 255;
+            const mx = Math.max(r, g, b);
+            if (mx > 0.25 && mx < 0.98) (fr += lin(r)), (fg += lin(g)), (fb += lin(b)), fn++;
+          }
+        }
+      if (cover >= 5) {
+        const Y = (0.2126 * R + 0.7152 * G + 0.0722 * B) / (S * S);
+        sum += Y;
+        Ys.push(Y);
+        n++;
+      }
+    }
+  Ys.sort((a, b) => a - b);
+  return { px: n, mean: n ? +(sum / n).toFixed(1) : null, p95: n ? Math.round(Ys[Math.floor(n * 0.95)]) : null,
+    face: fn > 4 ? { px: fn, cct: cct(fr / fn, fg / fn, fb / fn) } : null };
+}
+
+// the face light's own colour on screen: the frame minus the same frame with that robot's face light
+// off (bloom and the grade included, the visor's reflections cancelled), as a CCT; clipped: the share of
+// that light's pixels at the top of the range
+function faceOff(id, off) {
+  const m = stage.robots[id].anchors.face.material, u = m?.userData;
+  if (!u?.setLight) return;
+  if (off) (u._set = u.setLight), (u.setLight = () => u._set(0));
+  else if (u._set) (u.setLight = u._set), delete u._set;
+}
+function light(on, off) {
+  let r = 0, g = 0, b = 0, n = 0, clip = 0;
+  for (let k = 0; k < on.length; k += 4) {
+    const dr = lin(on[k] / 255) - lin(off[k] / 255), dg = lin(on[k + 1] / 255) - lin(off[k + 1] / 255), db = lin(on[k + 2] / 255) - lin(off[k + 2] / 255);
+    if (0.2126 * dr + 0.7152 * dg + 0.0722 * db < 0.004) continue;
+    (r += Math.max(0, dr)), (g += Math.max(0, dg)), (b += Math.max(0, db)), n++;
+    if (Math.max(on[k], on[k + 1], on[k + 2]) >= 250) clip++;
+  }
+  return n > 4 ? { px: n, cct: cct(r / n, g / n, b / n), clipped: +(clip / n).toFixed(2) } : null;
+}
+
+const out = {};
+for (const t of times) {
+  const img = frame(t);
+  const res = {};
+  for (const id of JUDGE_IDS) res[id] = stats(img, mask(id));
+  for (const id of JUDGE_IDS) {
+    faceOff(id, true);
+    const off = frame(t);
+    faceOff(id, false);
+    res[id].light = light(img, off);
+  }
+  frame(t); // leave the frame on screen
+  const fam = (ids) => {
+    const v = ids.map((i) => res[i].mean).filter((x) => x !== null && res[ids[0]] && true);
+    return v.length ? +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(1) : null;
+  };
+  const A = fam(["opus-5.5", "sonnet-5.5", "fable-5.1"]), O = fam(["gpt-6.1-sol", "gpt-6-astra"]);
+  res.anthropic = A;
+  res.openai = O;
+  res.ratio = A && O ? +(O / A).toFixed(3) : null;
+  out[t] = res;
+}
+window.__luma = { gfx, out };
+window.__stage = { ready: true, info: { gpu: (() => { const d = gl.getExtension("WEBGL_debug_renderer_info"); return d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : "?"; })(), gfx } };
+</script>

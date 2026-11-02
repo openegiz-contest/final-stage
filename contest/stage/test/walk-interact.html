@@ -1,0 +1,126 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>Сцена — Прогулка: взаимодействия (тест ui/walk-interact.js)</title>
+<link rel="stylesheet" href="/ui/stage.css">
+<link rel="stylesheet" href="/ui/cards.css">
+<style>
+  /* the webcam circles of ?cams=1 drawn on the test page only, so a still shows what OBS covers */
+  .test-cam { position: absolute; width: 300px; height: 300px; top: 40px; border-radius: 50%; box-shadow: inset 0 0 0 3px rgba(255, 80, 80, 0.85); background: rgba(255, 80, 80, 0.08); }
+</style>
+<script type="importmap">
+  { "imports": { "three": "/vendor/three/build/three.module.min.js", "three/addons/": "/vendor/three/examples/jsm/" } }
+</script>
+<canvas id="stage"></canvas>
+<div id="overlay" class="ov"></div>
+<script type="module">
+// TEST PAGE, never for air. The Walk's interactions (ui/walk-interact.js) on the real Stage, driven by
+// a mock of ui/walk.js (test/walk-interact-check.mjs drives it through window.__wi):
+//   walk.on("interact", fn)    the check emits { kind, id, point } through __wi.emit
+//   walk.on("toggle", fn)      { enabled } through __wi.toggle (P on show.html)
+//   walk.focus(obj, { shot })  cuts the director camera to the shot hint, back to the wide after `seconds`
+//   walk.busy(b)               recorded (the mock never blocks: the module's own guard is under test)
+//   walk.debug.share()         the Walk's share of the picture, set by __wi.setShare (1: the Walk on air)
+// The room is a hold: every Judge waiting, facing the room, consoles dim; the Host at its post.
+//   ?program=<url>  (default /program/program.json)   ?tts=<origin> the /synth service   ?cams=1
+import { createLiveStage } from "/ui/live.js";
+import { loadProgram } from "/ui/program.js";
+import { now, runLoop, showClock } from "/lib/clock.js";
+import { JUDGE_IDS, ROBOT_IDS } from "/robots/roster.js";
+import { camsOn } from "/ui/safe.js";
+import * as m from "/ui/walk-interact.js";
+
+const q = new URLSearchParams(location.search);
+const canvas = document.getElementById("stage"), overlay = document.getElementById("overlay");
+const { stage, subs, caps, voice } = await createLiveStage({ canvas, overlay, q });
+const program = await loadProgram(q.get("program") || "/program/program.json");
+await stage.ready();
+
+for (const id of JUDGE_IDS) {
+  stage.robots[id].setState("waiting", 0, { facing: "room" });
+  stage.desks[id].setPower(0.16, 0);
+}
+stage.camera.cut({ kind: "wide" }, 0);
+if (camsOn) for (const x of [40, 1920 - 340]) overlay.append(Object.assign(document.createElement("div"), { className: "test-cam", style: `left:${x}px` }));
+
+// what the module does to the scene, recorded
+const calls = { busy: [], focus: [], react: [], show: [], log: [] };
+for (const id of ROBOT_IDS) {
+  const r = stage.robots[id], react = r.react;
+  r.react = (kind, t, opts) => {
+    const h = react(kind, t, opts);
+    const rec = { id, kind, t, toward: !!opts?.toward, dur: opts?.dur ?? null, ok: !!h, cancelled: false, released: null };
+    calls.react.push(rec);
+    if (!h) return h;
+    return { ...h, get end() { return h.end; }, release: (at) => ((rec.released = at), h.release(at)), cancel: () => ((rec.cancelled = true), h.cancel()) };
+  };
+}
+for (const id of JUDGE_IDS) {
+  const d = stage.desks[id], show = d.show, setLog = d.setLog;
+  d.show = (c, t) => (calls.show.push({ id, src: c?.src ?? null, path: c?.path ?? null, label: c?.label ?? null, t }), show(c, t));
+  d.setLog = (items, t) => (calls.log.push({ id, items: items.map((x) => (x.path ? `${x.label}:${x.path}` : x.label)), t }), setLog(items, t));
+}
+
+// the mock walk
+const handlers = { interact: [], toggle: [] };
+let back = 0, share = 1;
+const walk = {
+  stage,
+  debug: { share: () => share },
+  on(ev, fn) {
+    const hs = handlers[ev];
+    if (!hs) return () => {};
+    hs.push(fn);
+    return () => hs.splice(hs.indexOf(fn), 1);
+  },
+  focus(obj, { seconds = 2.5, shot = null } = {}) {
+    const t = now();
+    calls.focus.push({ name: obj?.name || obj?.type || "?", shot: shot?.kind ?? null, id: shot?.id ?? null, seconds, t });
+    if (shot) stage.camera.cut(shot, t);
+    clearTimeout(back);
+    back = setTimeout(() => stage.camera.cut({ kind: "wide" }, now()), seconds * 1000);
+  },
+  busy(b) {
+    calls.busy.push({ b, t: now() });
+  },
+};
+
+let cur = { phase: "preshow", team: null };
+const ctx = (programData, pubBase = "/pub/") => ({ stage, voice, subtitles: subs, programData, pubBase, current: () => cur, overlay });
+let wi = m.attach(walk, ctx(program));
+
+runLoop({
+  renderAt(t) {
+    stage.renderAt(t);
+    subs.update(t);
+    caps.update(t);
+  },
+  renderer: stage.renderer,
+});
+
+window.__wi = {
+  m, stage, voice, subs, program, calls, showClock, now,
+  get wi() { return wi; },
+  setCurrent(phase, team = null) {
+    cur = { phase, team };
+  },
+  emit(ev) {
+    for (const h of [...handlers.interact]) h(ev);
+  },
+  setShare(v) {
+    share = v;
+  },
+  toggle(enabled) {
+    for (const h of [...handlers.toggle]) h({ enabled });
+  },
+  /** attach again with program.json's intro replaced (the urns' rules from another accepted text) and
+   *  another /pub/ (the publication itself before a run, or none) */
+  reattach(introText, pubBase = "/pub/") {
+    wi.dispose();
+    wi = m.attach(walk, ctx({ ...program, intro: { ...(program.intro ?? {}), text: introText ?? program.intro?.text } }, pubBase));
+  },
+  plays: () => voice.plays.map((p) => ({ speaker: p.speaker, text: p.prepared.text, at: p.at, end: p.end })),
+  subsShown: () => subs.shown,
+  ready: true,
+};
+</script>

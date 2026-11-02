@@ -1,0 +1,124 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>Stage voice test</title>
+<style>
+  html, body { margin: 0; background: #0b0d10; color: #e8e6e1; font: 22px/1.5 system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 40px; }
+  .bar { display: flex; gap: 24px; align-items: baseline; color: #8a8f98; font: 14px ui-monospace, monospace; }
+  .bar b { color: #e8c35a; font-weight: 600; }
+  #text { margin: 24px 0; min-height: 11em; }
+  #text .rest { opacity: 0.14; }
+  #meter { height: 18px; background: #1a1e24; border-radius: 3px; overflow: hidden; }
+  #level { height: 100%; width: 0; background: linear-gradient(90deg, #3b7d5c, #e8c35a 70%, #d9573f); }
+  #go { display: none; margin-top: 16px; font: inherit; padding: 8px 20px; }
+</style>
+<main>
+  <div class="bar"><span>speaker <b id="speaker"></b></span><span>engine <b id="engine">…</b></span><span>t <b id="clock">0.00</b> s</span><span>typed <b id="typed">0</b></span><span>level <b id="lv">0.00</b></span></div>
+  <div id="text"></div>
+  <div id="meter"><div id="level"></div></div>
+  <button id="go">Play</button>
+</main>
+<script type="module">
+// Checks lib/voice.js end to end: one 90-word Russian message under the service's voice (macOS without keys),
+// typed under it, with a level meter. Open it from the Stage server (http://127.0.0.1:8780/test/voice.html) with
+// the TTS service up (python3 contest/stage/tts/serve.py). Query: speaker=<id> (default opus-5.5), base=<service url>,
+// t=<s> freezes the page at show time t (virtual mode: no audio, same typing and level every time).
+// window.__stage: ready, seek(t), start(), result (filled when the line ends: typedAllAt, audioEndedAt, skewS, ...).
+import { createVoice, revealTime } from "/lib/voice.js";
+import { frozenAt, gfx } from "/lib/clock.js";
+
+const q = new URLSearchParams(location.search);
+const speaker = q.get("speaker") || "opus-5.5";
+const virtual = frozenAt !== null;
+const TEXT = "Коллеги, я прочитал оба решения целиком и считаю, что «Север-7» выигрывает по главному критерию: рудник у них действительно живёт по расписанию. Самосвалы не стоят в очереди, экскаватор получает машину ровно тогда, когда ковш поднят, а пробки на съезде в карьер почти не возникают. У «Востока» картинка красивее, но дважды за смену модель теряет самосвал на развилке, и это видно в журнале. Поэтому я голосую за «Север-7», а о красоте интерфейса мы поговорим на третьем месте, где она решает исход. Прошу коллег проверить журнал самим. Возражения принимаются, но с номерами строк.";
+
+const $ = (id) => document.getElementById(id);
+$("speaker").textContent = speaker;
+const t0 = performance.now();
+let shown = frozenAt ?? 0;
+const T = () => (virtual ? shown : (performance.now() - t0) / 1000);
+const voice = createVoice({ base: q.get("base") || undefined, clock: { now: T, virtual } });
+
+const result = { words: TEXT.trim().split(/\s+/).length, engine: null, reason: null, prepareMs: null, typedAllAt: null, audioEndedAt: null, expectedEnd: null, skewS: null, expectedSkewS: null, maxLevel: 0, meanLevelInSpeech: null, maxWordSyncErrorS: null, done: false };
+const syncErrors = [];
+let levelSum = 0, levelN = 0;
+let prepared = null, entry = null, lastN = -1;
+
+function draw(t) {
+  const n = voice.typedAt(prepared, t);
+  const lv = entry ? voice.levelAt(t) : 0;
+  $("text").innerHTML = "";
+  const typed = document.createElement("span");
+  typed.textContent = TEXT.slice(0, n);
+  const rest = document.createElement("span");
+  rest.className = "rest";
+  rest.textContent = TEXT.slice(n);
+  $("text").append(typed, rest);
+  $("clock").textContent = t.toFixed(2);
+  $("typed").textContent = `${n}/${TEXT.length}`;
+  $("lv").textContent = lv.toFixed(2);
+  $("level").style.width = `${lv * 100}%`;
+  return { n, lv };
+}
+
+function frame() {
+  const t = T();
+  const { n, lv } = draw(t);
+  result.maxLevel = Math.max(result.maxLevel, lv);
+  if (t >= entry.at && t < entry.end) (levelSum += lv), levelN++;
+  if (n !== lastN) {
+    lastN = n;
+    const pos = voice.audioPosition(entry); // the word that just appeared, against the audio clock
+    const w = prepared.words.find((x) => x.end_char === n);
+    if (w && pos !== null) syncErrors.push(pos - revealTime(w));
+    if (n === TEXT.length) result.typedAllAt = t;
+  }
+  if (entry.endedAt !== null && !result.done) {
+    result.audioEndedAt = entry.endedAt;
+    result.expectedEnd = entry.end;
+    result.skewS = result.typedAllAt - entry.endedAt;
+    result.expectedSkewS = result.typedAllAt - entry.end;
+    result.meanLevelInSpeech = levelN ? levelSum / levelN : null;
+    result.maxWordSyncErrorS = syncErrors.length ? Math.max(...syncErrors.map(Math.abs)) : null;
+    result.done = true;
+  }
+  if (!result.done) requestAnimationFrame(frame);
+}
+
+const hook = (window.__stage = {
+  ready: false,
+  info: { gpu: "none (audio page)", gfx },
+  result,
+  voice,
+  async seek(t) {
+    shown = t;
+    draw(t);
+  },
+  start() {
+    entry = voice.plays.at(-1) ?? (voice.play(prepared, { at: T() + 0.4 }), voice.plays.at(-1));
+    $("go").style.display = "none";
+    requestAnimationFrame(frame);
+  },
+});
+
+const t1 = performance.now();
+prepared = await voice.prepare(speaker, TEXT);
+result.prepareMs = Math.round(performance.now() - t1);
+result.engine = prepared.engine;
+result.reason = prepared.reason ?? null;
+$("engine").textContent = `${prepared.engine}${prepared.voice ? " / " + prepared.voice : ""}${prepared.cached ? " (cached)" : ""}`;
+
+if (virtual) {
+  voice.play(prepared, { at: 1 });
+  entry = voice.plays.at(-1);
+  draw(shown);
+  hook.ready = true;
+} else {
+  const state = await voice.unlock();
+  const go = () => { voice.unlock().then(() => hook.start()); };
+  if (state === "running") hook.start();
+  else { $("go").style.display = "block"; $("go").onclick = go; }
+  hook.ready = true;
+}
+</script>
